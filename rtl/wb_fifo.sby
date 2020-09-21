@@ -1,0 +1,16 @@
+[tasks]
+prf
+
+[options]
+prf: mode prove
+depth 40
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -DFIFO -formal wb_fifo.v
+prep -top wb_fifo
+
+[files]
+wb_fifo.v
