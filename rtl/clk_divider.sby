@@ -1,0 +1,16 @@
+[tasks]
+prf
+
+[options]
+prf: mode prove
+depth 40
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -formal clk_divider.v
+prep -top clk_divider
+
+[files]
+clk_divider.v
