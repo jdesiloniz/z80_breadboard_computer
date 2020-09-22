@@ -1,0 +1,16 @@
+[tasks]
+prf
+
+[options]
+prf: mode prove
+depth 40
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -DSHIFTER -formal shifter.v
+prep -top shifter
+
+[files]
+shifter.v

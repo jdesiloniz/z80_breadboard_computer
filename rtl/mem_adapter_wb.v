@@ -21,7 +21,7 @@
  *
  * 4000-9FFF        RAM (non-code data)
  *
- * A000             UART status register (are tx/rx full or empty?)
+ * A000             UART status register (are tx/rx full?)
  * A001             UART access (reading gets a character from UART RX FIFO if any, otherwise returns a 0, writing submits a character to the UART TX FIFO - if full will be eventually ignored)
  * A002             Operation result LED control (writes switch the led to the value of LSB bit, reads are ignored)
  *
