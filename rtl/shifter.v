@@ -14,7 +14,7 @@
 */
 module shifter
 #(
-    parameter DATA_WIDTH = 3
+    parameter DATA_WIDTH = 10
 )(
     input	wire	[DATA_WIDTH-1:0]	i_data,
     input   wire    [2:0]               i_op,
