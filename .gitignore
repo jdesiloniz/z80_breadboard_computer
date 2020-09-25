@@ -1,3 +1,6 @@
 *_prf
 reference_docs
 .DS_Store
+*.DSYM
+*.vcd
+obj_dir

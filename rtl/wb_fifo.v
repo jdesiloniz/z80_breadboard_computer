@@ -33,13 +33,17 @@ module wb_fifo
     // Wishbone push bus
 	input	wire	[DW-1:0]	i_wb_push_data,
 	input	wire 				i_wb_push_stb,
+	/* verilator lint_off UNUSED */
     input	wire 				i_wb_push_cyc,
+	/* verilator lint_on UNUSED */
     output  reg                 o_wb_push_stall,
     output  reg                 o_wb_push_ack,
 
 	// Wishbone pop bus
 	input	wire 				i_wb_pop_stb,
+	/* verilator lint_off UNUSED */
     input	wire 				i_wb_pop_cyc,
+	/* verilator lint_on UNUSED */
 	output	reg 	[DW-1:0]	o_wb_pop_data,
     output  reg                 o_wb_pop_stall,
     output  reg                 o_wb_pop_ack,
