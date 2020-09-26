@@ -13,9 +13,11 @@
 #include "Vwb_fifo.h"
 #include "testb.h"
 
+#define MAX_FIFO_ITEMS 31
+
 using namespace std;
 
-unsigned fifo_buffer[32];
+unsigned fifo_buffer[MAX_FIFO_ITEMS];
 
 void update_simulation(TESTB<Vwb_fifo> *tb) {
 	// mem write op
@@ -77,6 +79,27 @@ void pop_data_n(TESTB<Vwb_fifo> *tb, unsigned times) {
 	}
 }
 
+std::vector<unsigned> push_data_array(TESTB<Vwb_fifo> *tb, unsigned times) {
+	std::vector<unsigned> result;
+
+	for (int i = 0; i < times; i++) {
+		int value = (rand() % 100) + 1;
+		push_data(tb, value);
+		result.push_back(value);
+	}
+
+	return result;
+}
+
+std::vector<unsigned> pop_data_array(TESTB<Vwb_fifo> *tb, unsigned times) {
+	std::vector<unsigned> result;
+	for (int i = 0; i < times; i++) {
+		result.push_back(pop_data(tb));
+	}
+
+	return result;
+}
+
 int	main(int argc, char **argv) {	
 	Verilated::commandArgs(argc, argv);
 	TESTB<Vwb_fifo> *tb = new TESTB<Vwb_fifo>;
@@ -105,12 +128,36 @@ int	main(int argc, char **argv) {
 	print_fifo_state(tb);
 
 	printf("[TEST] Filling FIFO\n");
-	push_data_n(tb, 30);
+	push_data_n(tb, MAX_FIFO_ITEMS);
 	print_fifo_state(tb);
 
 	printf("[TEST] Removing one element from FIFO to check full state\n");
 	pop_data(tb);
 	print_fifo_state(tb);
 
+	pop_data_n(tb, MAX_FIFO_ITEMS); 	// Get it empty again
+	print_fifo_state(tb);
+
+	printf("[TEST] Filling FIFO again\n");
+	std::vector<unsigned> data_in = push_data_array(tb, MAX_FIFO_ITEMS);
+	print_fifo_state(tb);
+
+	printf("[TEST] Checking data integrity\n");
+	std::vector<unsigned> data_out = pop_data_array(tb, MAX_FIFO_ITEMS);
+	print_fifo_state(tb);
+
+	if (data_in != data_out) {
+		printf("[TEST] Data inconsistency found.\n");
+		printf("[TEST] Data in: ");
+		for (std::vector<unsigned>::const_iterator i = data_in.begin(); i != data_in.end(); ++i) {
+    		printf("%02X, ", *i);
+		}
+		printf("\n[TEST] Data out: ");
+		for (std::vector<unsigned>::const_iterator i = data_out.begin(); i != data_out.end(); ++i) {
+    		printf("%02X, ", *i);
+		}
+	}
+
 	printf("\n\nSimulation complete\n");
+
 }

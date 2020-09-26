@@ -94,8 +94,8 @@ module wb_fifo
 
     // Pointers' next values
     always @(*) begin
-        ptr_reads_after 	= (ptr_reads >= MAX_ADDR - 1'b1) ? ADDR_ZERO : ptr_reads + 1'b1;
-        ptr_writes_after    = (ptr_writes >= MAX_ADDR - 1'b1) ? ADDR_ZERO : ptr_writes + 1'b1;
+        ptr_reads_after 	= (ptr_reads >= MAX_ADDR) ? ADDR_ZERO : ptr_reads + 1'b1;
+        ptr_writes_after    = (ptr_writes >= MAX_ADDR) ? ADDR_ZERO : ptr_writes + 1'b1;
     end
 
     // Full / empty signals
@@ -105,13 +105,16 @@ module wb_fifo
     end
 	
 	// Memory bus control
-    always @(*) begin
-        mem_we = cmd_push;
-        mem_data_write = i_wb_push_data;
-        mem_addr_r = ptr_reads;
-        mem_addr_w = ptr_writes;
-        o_wb_pop_data = mem_data_read;
+    always @(posedge i_clk) begin
+        mem_we <= cmd_push;
+        mem_data_write <= i_wb_push_data;
+        mem_addr_r <= ptr_reads;
+        mem_addr_w <= ptr_writes;
     end
+
+	always @(*) begin
+		o_wb_pop_data = mem_data_read;
+	end
 
 	// Push
 	always @(*)
@@ -172,36 +175,29 @@ module wb_fifo
             assume(!i_wb_pop_stb);
     end
 
-    // Check the state during a reset
-    always @(posedge i_clk) begin
-        if (f_past_valid && $past(!i_reset_n) && !i_reset_n) begin
-            assert(!o_wb_push_ack && !o_wb_pop_ack && !o_wb_push_stall && !o_wb_pop_stall && empty && !full && !mem_we);
-        end
-    end
-
 	// FIFO can't write nor read beyond the memory limits
 	always @(posedge i_clk)
         if (i_reset_n)
-		    assert(ptr_writes < MAX_ADDR && ptr_reads < MAX_ADDR);
+		    assert(ptr_writes <= MAX_ADDR && ptr_reads <= MAX_ADDR);
 
 	// FIFO's full signal should always be active if we're really full
-	always @(*)
-		if (ptr_writes_after == ptr_reads)
+	always @(posedge i_clk)
+		if (f_past_valid && ptr_writes_after == ptr_reads)
 			assert(full);
 
 	// Same for empty signal
-	always @(*)
-		if (ptr_writes == ptr_reads)
+	always @(posedge i_clk)
+		if (f_past_valid && ptr_writes == ptr_reads)
 			assert(empty);
 
 	// Writing to a full FIFO doesn't have any effect
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_push_stb && !i_wb_pop_stb) && $past(full))
+		if (f_past_valid && $past(i_reset_n, 2) && $past(i_reset_n) && i_reset_n && $past(i_wb_push_stb && !i_wb_pop_stb && full))
 			assert(full && $stable(ptr_writes));
 
 	// Reading from an empty FIFO doesn't have any effect
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_pop_stb && !i_wb_push_stb) && $past(empty))
+		if (f_past_valid && $past(i_reset_n, 2) && $past(i_reset_n) && i_reset_n && $past(!i_wb_push_stb, 2) && $past(i_wb_pop_stb && !i_wb_push_stb && empty))
 			assert(empty && $past(ptr_reads) == ptr_reads);
 
 	// While writing we don't touch the reading pointer
@@ -226,13 +222,13 @@ module wb_fifo
 
 	// Check we're reading the right data from memory
 	always @(posedge i_clk)
-		if ($past(i_wb_pop_stb && !empty && i_reset_n) && i_reset_n)
-			assert($past(mem_addr_r == ptr_reads) && o_wb_pop_data == mem_data_read);
+		if (f_past_valid && $past(i_wb_pop_stb && !empty && i_reset_n, 2) && $past(i_reset_n) && i_reset_n)
+			assert(mem_addr_r == ptr_reads && o_wb_pop_data == mem_data_read);
 
 	// And we're writing the right data to memory
 	always @(posedge i_clk)
-		if (i_wb_push_stb && !full && $past(i_reset_n) && i_reset_n)
-			assert(mem_data_write == i_wb_push_data && mem_we && mem_addr_w == ptr_writes);
+		if (f_past_valid && $past(i_wb_push_stb && !full && i_reset_n) && i_reset_n)
+			assert(mem_data_write == $past(i_wb_push_data) && mem_we && mem_addr_w == $past(ptr_writes));
 
 	// Also that we can't write to memory if FIFO is full
 	always @(posedge i_clk)
@@ -246,7 +242,7 @@ module wb_fifo
 
 	// And obviously it should be impossible to be empty after a push
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_push_stb))
+		if (f_past_valid && $past(i_reset_n, 2) && $past(i_reset_n) && i_reset_n && $past(i_wb_push_stb && !i_wb_pop_stb))
 			assert(!empty);
 
     // There's no back pressure unless we're full so we should be acking as soon as we get a valid memory result (i.e.: 1 cycle after request)

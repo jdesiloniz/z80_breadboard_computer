@@ -4,3 +4,7 @@ reference_docs
 *.DSYM
 *.vcd
 obj_dir
+.vscode
+
+# Sim binaries
+sim/wb_fifo_tb/wb_fifo_tb
