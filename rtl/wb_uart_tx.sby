@@ -1,0 +1,16 @@
+[tasks]
+prf
+
+[options]
+prf: mode prove
+depth 40
+
+[engines]
+smtbmc
+
+[script]
+read_verilog  -DUART_TX -formal wb_uart_tx.v
+prep -top wb_uart_tx
+
+[files]
+wb_uart_tx.v

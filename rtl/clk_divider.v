@@ -9,8 +9,13 @@
  */
 module clk_divider
 #(
+    `ifdef VERILATOR
+    parameter CLK_DIVIDER_RATE = 4'd10,
+    parameter CLK_DIVIDER_WIDTH = 4
+    `else
     parameter CLK_DIVIDER_RATE = 12'd2604,
     parameter CLK_DIVIDER_WIDTH = 12
+    `endif
 )(
     input       wire            i_clk,
     input       wire            i_reset_n,
@@ -28,7 +33,6 @@ module clk_divider
     reg     [CLK_DIVIDER_WIDTH-1:0]     cnt_clk_div;
 
     reg reset_count;
-    reg start_count;
 
     // Counter for clock division
     always @(posedge i_clk) begin
@@ -90,8 +94,7 @@ module clk_divider
     end
 
     always @(*) begin
-        reset_count = transition_back_to_idle; 
-        start_count = transition_idle_to_count;
+        reset_count = transition_back_to_idle;
     end
 
 /*********************
