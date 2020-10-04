@@ -1,1 +1,1 @@
-# Z80-based breadboard computer
+# Z80-based mini computer
