@@ -9,8 +9,11 @@ depth 40
 smtbmc
 
 [script]
-read_verilog  -DUART_TX -formal wb_uart_tx.v
+read_verilog  -DUART_TX -formal shifter.v clk_divider.v wb_fifo.v wb_uart_tx.v
 prep -top wb_uart_tx
 
 [files]
+shifter.v
+clk_divider.v
+wb_fifo.v 
 wb_uart_tx.v

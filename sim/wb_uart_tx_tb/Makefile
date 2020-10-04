@@ -3,8 +3,10 @@
 TOPMOD  := wb_uart_tx
 FIFOMOD := wb_fifo
 CLDVMOD := clk_divider
+SHFTMOD := shifter
 FIFOFIL := $(FIFOMOD).v
 CLDVFIL := $(CLDVMOD).v
+SHFVFIL := $(SHFTMOD).v
 VLOGFIL := $(TOPMOD).v
 VLOGDIR := ../../rtl
 VCDFILE := $(TOPMOD).vcd
@@ -24,8 +26,6 @@ CFLAGS = -g -Wall -I$(VINC) -I $(VDIRFB) -I $(SIMINC)
 
 VERILATOR=verilator
 VFLAGS := -O3 -MMD --trace -Wall --top-module $(TOPMOD)
-VFLAGSCLK := -O3 -MMD --trace -Wall --top-module $(CLDVMOD)
-VFLAGSFIFO := -O3 -MMD --trace -Wall --top-module $(FIFOMOD)
 
 ## Find the directory containing the Verilog sources.  This is given from
 ## calling: "verilator -V" and finding the VERILATOR_ROOT output line from
@@ -36,28 +36,15 @@ VERILATOR_ROOT ?= $(shell bash -c '$(VERILATOR) -V|grep VERILATOR_ROOT | head -1
 ## The directory containing the verilator includes
 VINC := $(VERILATOR_ROOT)/include
 
-$(VDIRFB)/V$(CLDVMOD).cpp: $(VLOGDIR)/$(CLDVFIL)
-	$(VERILATOR) $(VFLAGSCLK) -cc $(VLOGDIR)/$(CLDVFIL)
+$(VDIRFB)/V$(TOPMOD).cpp: $(VLOGDIR)/$(VLOGFIL)
+	$(VERILATOR) $(VFLAGS) -cc $(VLOGDIR)/$(CLDVFIL) $(VLOGDIR)/$(SHFVFIL) $(VLOGDIR)/$(FIFOFIL) $(VLOGDIR)/$(VLOGFIL)
 
-$(VDIRFB)/V$(FIFOMOD).cpp: $(VLOGDIR)/$(FIFOFIL)
-	$(VERILATOR) $(VFLAGSFIFO) -cc $(VLOGDIR)/$(FIFOFIL)
-
-$(VDIRFB)/V$(TOPMOD).cpp: $(VDIRFB)/V$(FIFOMOD).cpp $(VDIRFB)/V$(CLDVMOD).cpp $(VLOGDIR)/$(VLOGFIL)
-	$(VERILATOR) $(VFLAGS) -cc $(VLOGDIR)/$(VLOGFIL)
-
-$(VDIRFB)/V$(CLDVMOD)__ALL.a: $(VDIRFB)/V$(CLDVMOD).cpp
-	make --no-print-directory -C $(VDIRFB) -f V$(CLDVMOD).mk
-
-$(VDIRFB)/V$(FIFOMOD)__ALL.a: $(VDIRFB)/V$(TOPMOD).cpp
+$(VDIRFB)/V$(TOPMOD)__ALL.a: $(VDIRFB)/V$(TOPMOD).cpp
 	make --no-print-directory -C $(VDIRFB) -f V$(TOPMOD).mk
 
-$(VDIRFB)/V$(TOPMOD)__ALL.a: $(VDIRFB)/V$(CLDVMOD).cpp $(VDIRFB)/V$(FIFOMOD)__ALL.a
-	make --no-print-directory -C $(VDIRFB) -f V$(TOPMOD).mk
-
-$(SIMPROG): $(SIMFILE) $(SIMPLUG) $(VDIRFB)/V$(FIFOMOD)__ALL.a $(VDIRFB)/V$(CLDVMOD)__ALL.a $(VDIRFB)/V$(TOPMOD)__ALL.a
+$(SIMPROG): $(SIMFILE) $(SIMPLUG) $(VDIRFB)/V$(TOPMOD)__ALL.a
 	$(GCC) $(CFLAGS) $(VINC)/verilated.cpp				\
 		$(VINC)/verilated_vcd_c.cpp $(SIMFILE) $(SIMPLUG)	\
-		$(VDIRFB)/V$(FIFOMOD)__ALL.a $(VDIRFB)/V$(CLDVMOD)__ALL.a \
 		$(VDIRFB)/V$(TOPMOD)__ALL.a -o $(SIMPROG) 
 
 test: $(VCDFILE)
