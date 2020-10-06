@@ -15,11 +15,12 @@ SIMFILE := $(SIMPROG).cpp
 FIFOSIM := $(FIFOMOD).cpp
 SIMPLUG := ../signals/signals.cpp
 SIMINC := ../include
+UARXINC := ./uart_rx.cpp
 VDIRFB  := ./obj_dir
 all: $(VCDFILE)
 
 GCC := g++
-CFLAGS = -g -Wall -I$(VINC) -I $(VDIRFB) -I $(SIMINC)
+CFLAGS = -g -Wall -I$(VINC) -I $(VDIRFB) -I $(SIMINC) $(UARXINC)
 #
 # Modern versions of Verilator and C++ may require an -faligned-new flag
 # CFLAGS = -g -Wall -faligned-new -I$(VINC) -I $(VDIRFB)

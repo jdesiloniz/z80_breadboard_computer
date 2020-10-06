@@ -21,13 +21,14 @@ module clk_divider
     input       wire            i_reset_n,
     input       wire            i_start_stb,
     input       wire            i_reset_stb,
-    output      reg             o_div_clk
+    output      reg             o_div_clk,
+    output      reg             o_div_clk_rose
 );
 
     /******************
      * DATA PATH
     ******************/
-    localparam FULL_COUNT = {CLK_DIVIDER_WIDTH{1'b1}};
+    localparam FULL_COUNT = CLK_DIVIDER_RATE - 1'b1;
     localparam ZERO_COUNT = {CLK_DIVIDER_WIDTH{1'b0}};
 
     reg     [CLK_DIVIDER_WIDTH-1:0]     cnt_clk_div;
@@ -39,7 +40,7 @@ module clk_divider
         if (!i_reset_n||reset_count) begin
             cnt_clk_div <= FULL_COUNT;
         end else if (state == STATE_COUNTING) begin
-            cnt_clk_div <= cnt_clk_div - 1'b1;
+            cnt_clk_div <= (cnt_clk_div == ZERO_COUNT) ? FULL_COUNT : cnt_clk_div - 1'b1;
         end else cnt_clk_div <= FULL_COUNT;
     end
 
@@ -50,6 +51,11 @@ module clk_divider
         end else if (cnt_clk_div == ZERO_COUNT) begin
             o_div_clk <= ~o_div_clk;
         end
+    end
+
+    // Letting components know about change in clock state to positive edge
+    always @(posedge i_clk) begin
+        o_div_clk_rose <= cnt_clk_div == ZERO_COUNT && o_div_clk == 1'b0;
     end
 
     /******************

@@ -8,8 +8,8 @@ module wb_uart_tx
     localparam UART_BITS_SIZE = 4,
     
     `ifdef VERILATOR
-    parameter BAUD_DIV_RATE = 4'd10,
-    parameter BAUD_DIV_WIDTH = 4
+    parameter BAUD_DIV_RATE = 3'd05,
+    parameter BAUD_DIV_WIDTH = 3
     `else
     parameter BAUD_DIV_RATE = 12'd2604,
     parameter BAUD_DIV_WIDTH = 12
@@ -90,7 +90,10 @@ module wb_uart_tx
     // ******** Clock divider
     reg                             o_clk_div_start_stb;
     reg                             o_clk_div_reset_stb;
+    wire                            clk_div_did_rise;
+    /* verilator lint_off UNUSED */
     wire                            i_clk_div_clk;
+    /* verilator lint_on UNUSED */
 
     clk_divider #(.CLK_DIVIDER_RATE(BAUD_DIV_RATE), .CLK_DIVIDER_WIDTH(BAUD_DIV_WIDTH)) CLK_DIV(
         .i_clk              (i_clk),
@@ -98,7 +101,8 @@ module wb_uart_tx
 
         .i_start_stb        (o_clk_div_start_stb),
         .i_reset_stb        (o_clk_div_reset_stb),
-        .o_div_clk          (i_clk_div_clk)
+        .o_div_clk          (i_clk_div_clk),
+        .o_div_clk_rose     (clk_div_did_rise)
     );
 
     
@@ -132,16 +136,16 @@ module wb_uart_tx
     reg reset_baud_clk_div;
 
     // Clock divider
-    reg     [1:0]   clk_div_rise_shift;
-    reg             clk_div_did_rise;
+    //reg     [1:0]   clk_div_rise_shift;
+    //reg             clk_div_did_rise;
 
-    always @(posedge i_clk) begin
+    /*always @(posedge i_clk) begin
         clk_div_rise_shift <= {clk_div_rise_shift[0], i_clk_div_clk};
     end
 
     always @(*) begin
         clk_div_did_rise    = clk_div_rise_shift == 2'b01;
-    end
+    end*/
 
     always @(posedge i_clk) begin
         o_clk_div_start_stb <= start_baud_clk_div;
