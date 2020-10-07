@@ -155,6 +155,12 @@ module clk_divider
         end
     end
 
+    // Rose signal rises at the same time as the clock signal turns into 1'b1
+    always @(posedge i_clk) begin
+        if (f_past_valid && f_not_any_reset && $past(f_not_any_reset) && $past(cnt_clk_div == ZERO_COUNT && o_div_clk == 1'b0))
+            assert(o_div_clk_rose);
+    end
+
     // Start strobe makes the counting process begin
     always @(posedge i_clk) begin
         if (f_past_valid && f_not_any_reset && $past(f_not_any_reset) && $past(f_not_any_reset, 2) && $past(i_start_stb && state == STATE_IDLE, 2)) begin

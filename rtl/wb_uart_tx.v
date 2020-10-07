@@ -330,7 +330,7 @@ module wb_uart_tx
 
     // We should shift the bit after a baud clock change on the rising edge
     always @(posedge i_clk)
-        if (f_past_valid && i_reset_n && $past(!i_clk_div_clk && i_reset_n, 3) && $past(i_clk_div_clk && i_reset_n, 2) && state > STATE_TX_SEND_BIT0 && state < STATE_TX_SEND_BIT9)
+        if (f_past_valid && i_reset_n && $past(!i_clk_div_clk && i_reset_n, 2) && $past(i_clk_div_clk && i_reset_n) && state > STATE_TX_SEND_BIT0 && state < STATE_TX_SEND_BIT9)
             assert(o_shifter_data == $past(i_shifter_data) && o_shifter_op == 3'd3);
 
     // While idle, the TX line should be held inactive (= 1'b1)
