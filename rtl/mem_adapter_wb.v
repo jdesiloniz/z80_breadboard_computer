@@ -21,7 +21,7 @@
  *
  * 4000-9FFF        RAM (non-code data)
  *
- * A000             UART status register (are tx/rx full?)
+ * A000             UART status register (are tx full/rx empty?)
  * A001             UART access (reading gets a character from UART RX FIFO if any, otherwise returns a 0, writing submits a character to the UART TX FIFO - if full will be eventually ignored)
  * A002             Operation result LED control (writes switch the led to the value of LSB bit, reads are ignored)
  *
@@ -75,6 +75,7 @@ module mem_adapter_wb
     input   wire    [Z80_DATA_WIDTH-1:0]    i_wb_rx_data,
     input   wire                            i_wb_rx_stall,
     input   wire                            i_wb_rx_ack,
+    input   wire                            rx_empty,
 
     output  reg                             o_wb_tx_stb,
     output  reg                             o_wb_tx_cyc,
@@ -156,12 +157,12 @@ module mem_adapter_wb
 
     // UART status register
     //   7   6   5   4   3   2        1              0
-    // | x | x | x | x | x | x | tx_fifo_full | rx_fifo_full |
+    // | x | x | x | x | x | x | tx_fifo_full | rx_fifo_empty |
     reg [Z80_DATA_WIDTH-1:0] reg_uart_status;
     localparam UART_STATUS_REG_GAP = Z80_DATA_WIDTH - 2;
 
     always @(*) begin
-        reg_uart_status = {{UART_STATUS_REG_GAP{1'b0}}, i_wb_tx_stall, i_wb_rx_stall};
+        reg_uart_status = {{UART_STATUS_REG_GAP{1'b0}}, i_wb_tx_stall, rx_empty};
     end
 
     /******************
@@ -404,7 +405,7 @@ module mem_adapter_wb
 
     // UART status register should have the intended values:
     always @(*) begin
-        assert(reg_uart_status == {6'b0, i_wb_tx_stall, i_wb_rx_stall});
+        assert(reg_uart_status == {6'b0, i_wb_tx_stall, rx_empty});
     end
 
     // We should generate a request to the UART RX module when requested

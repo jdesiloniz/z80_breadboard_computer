@@ -104,7 +104,6 @@ module wb_uart_tx
         .o_div_clk          (i_clk_div_clk),
         .o_div_clk_rose     (clk_div_did_rise)
     );
-
     
     // ******** Bit shifter
     /* verilator lint_off UNOPTFLAT */
@@ -134,18 +133,6 @@ module wb_uart_tx
     reg load_from_fifo;
     reg start_baud_clk_div;
     reg reset_baud_clk_div;
-
-    // Clock divider
-    //reg     [1:0]   clk_div_rise_shift;
-    //reg             clk_div_did_rise;
-
-    /*always @(posedge i_clk) begin
-        clk_div_rise_shift <= {clk_div_rise_shift[0], i_clk_div_clk};
-    end
-
-    always @(*) begin
-        clk_div_did_rise    = clk_div_rise_shift == 2'b01;
-    end*/
 
     always @(posedge i_clk) begin
         o_clk_div_start_stb <= start_baud_clk_div;
