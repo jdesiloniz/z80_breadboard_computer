@@ -52,9 +52,9 @@ module wb_uart_rx
     reg                             o_wb_push_fifo_stb;
     reg                             o_wb_push_fifo_cyc;
     reg     [7:0]                   o_wb_push_fifo_data;
+    /* verilator lint_off UNUSED */
     wire                            i_wb_push_fifo_ack;
     wire                            i_wb_push_fifo_stall;
-    /* verilator lint_off UNUSED */
     wire                            i_wb_pop_fifo_stall;
     /* verilator lint_on UNUSED */
     reg 				            o_wb_pop_fifo_stb;
@@ -116,7 +116,6 @@ module wb_uart_rx
 
     // Commands
     reg shift_data;
-    reg clear_shifted_data;
     reg push_into_fifo;
     reg start_baud_clk_div;
     reg reset_baud_clk_div;
@@ -205,7 +204,7 @@ module wb_uart_rx
         transition_wait_for_bit7        = (state == STATE_RX_RECEIVE_BIT6) && clk_div_did_rise;
         transition_wait_for_bit8        = (state == STATE_RX_RECEIVE_BIT7) && clk_div_did_rise;
         transition_wait_for_bit9        = (state == STATE_RX_RECEIVE_BIT8) && clk_div_did_rise;
-        transition_push_data            = (state == STATE_RX_RECEIVE_BIT9) && clk_div_did_rise;
+        transition_push_data            = (state == STATE_RX_RECEIVE_BIT9) && uart_rx;      // We don't wait a full cycle, instead become idle after the stop bit has arrived
         transition_finish_rx            = state == STATE_RX_PUSH_DATA;
     end
 
@@ -246,7 +245,6 @@ module wb_uart_rx
         push_into_fifo              = transition_push_data;
         start_baud_clk_div          = transition_prepare_data;
         shift_data                  = transition_wait_for_bit0||transition_wait_for_bit1||transition_wait_for_bit2||transition_wait_for_bit3||transition_wait_for_bit4||transition_wait_for_bit5||transition_wait_for_bit6||transition_wait_for_bit7||transition_wait_for_bit8||transition_wait_for_bit9;
-        clear_shifted_data          = transition_finish_rx;
         reset_baud_clk_div          = transition_finish_rx;
     end
 

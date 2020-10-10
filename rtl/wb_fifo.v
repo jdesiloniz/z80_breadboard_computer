@@ -117,16 +117,16 @@ module wb_fifo
 	end
 
 	// Push
-	always @(*)
+	always @(posedge i_clk)
         if (!i_reset_n)
-            cmd_push = 1'b0;
-        else cmd_push = i_wb_push_stb && !full;
+            cmd_push <= 1'b0;
+        else cmd_push <= i_wb_push_stb && !full;
 
 	// Pop
-	always @(*)
+	always @(posedge i_clk)
         if (!i_reset_n)
-            cmd_pop = 1'b0;
-        else cmd_pop = i_wb_pop_stb && !empty;
+            cmd_pop <= 1'b0;
+        else cmd_pop <= i_wb_pop_stb && !empty;
 
     // Stall/acks
     always @(*) begin

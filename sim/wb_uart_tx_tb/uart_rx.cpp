@@ -8,13 +8,13 @@ UartRx::UartRx()
 
 void UartRx::init_rx_uart() {
     rx_value = 0;
-	rx_char_count = 0;
+	rx_bit_count = 0;
 	rx_clock = (UART_CHARS * (UART_BAUDS - 1));
 	rx_active = false;
 }
 
 void UartRx::shift_rx(unsigned rx) {
-    rx_value = (rx_value + (rx << rx_char_count));
+    rx_value = (rx_value + (rx << rx_bit_count));
 }
 
 void UartRx::update_rx_uart(unsigned rx) {
@@ -30,7 +30,7 @@ void UartRx::update_rx_uart(unsigned rx) {
 		} else if (rx_clock > 0 && rx_clock % UART_BAUDS == 0) {
 			// A new bit was sent:
 			shift_rx(rx);
-			rx_char_count++;
+			rx_bit_count++;
 		}
 	} else if (rx == 0) {
 		rx_active = true;

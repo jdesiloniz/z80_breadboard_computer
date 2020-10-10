@@ -8,3 +8,5 @@ obj_dir
 
 # Sim binaries
 sim/wb_fifo_tb/wb_fifo_tb
+sim/wb_uart_rx_tb/wb_uart_rx_tb
+sim/wb_uart_tx_tb/wb_uart_tx_tb

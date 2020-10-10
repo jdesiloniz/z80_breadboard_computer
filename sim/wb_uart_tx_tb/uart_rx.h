@@ -4,7 +4,7 @@
 class UartRx {
     private:
         unsigned rx_value;
-	    unsigned rx_char_count;
+	    unsigned rx_bit_count;
 	    unsigned rx_clock;
 	    unsigned rx_active;
         void init_rx_uart();
