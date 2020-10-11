@@ -75,6 +75,7 @@ void read_data_from_uart_fifo(TESTB<Vwb_uart_rx> *tb, UartTx *uart_tx) {
             wait_clocks(tb, uart_tx, 1);
         }
 
+        wait_clocks(tb, uart_tx, 1);
         printf("%c", tb->m_core->o_wb_data);
     }
     printf("\n");

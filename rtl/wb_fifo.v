@@ -106,15 +106,13 @@ module wb_fifo
 	
 	// Memory bus control
     always @(posedge i_clk) begin
-        mem_we <= cmd_push;
+		mem_we <= cmd_push;
         mem_data_write <= i_wb_push_data;
         mem_addr_r <= ptr_reads;
         mem_addr_w <= ptr_writes;
-    end
 
-	always @(*) begin
-		o_wb_pop_data = mem_data_read;
-	end
+		o_wb_pop_data <= mem_data_read;
+    end
 
 	// Push
 	always @(posedge i_clk)
@@ -175,6 +173,10 @@ module wb_fifo
             assume(!i_wb_pop_stb);
     end
 
+	// Let's also assume that we're not gonna get push and pops at the same time (being accessed by a single-thread CPU):
+	always @(*)
+		assume(!(i_wb_pop_stb && i_wb_push_stb));
+
 	// FIFO can't write nor read beyond the memory limits
 	always @(posedge i_clk)
         if (i_reset_n)
@@ -192,42 +194,32 @@ module wb_fifo
 
 	// Writing to a full FIFO doesn't have any effect
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n, 2) && $past(i_reset_n) && i_reset_n && $past(i_wb_push_stb && !i_wb_pop_stb && full))
-			assert(full && $stable(ptr_writes));
+		if (f_past_valid && $past(i_reset_n && i_wb_push_stb && !i_wb_pop_stb && full, 2) && $past(i_reset_n && !i_wb_pop_stb) && i_reset_n && !i_wb_pop_stb)
+			assert(!cmd_push);
 
 	// Reading from an empty FIFO doesn't have any effect
 	always @(posedge i_clk)
 		if (f_past_valid && $past(i_reset_n, 2) && $past(i_reset_n) && i_reset_n && $past(!i_wb_push_stb, 2) && $past(i_wb_pop_stb && !i_wb_push_stb && empty))
 			assert(empty && $past(ptr_reads) == ptr_reads);
 
-	// While writing we don't touch the reading pointer
-	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_push_stb && !i_wb_pop_stb))
-			assert($past(ptr_reads) == ptr_reads);
-
-	// And vice-versa...
-	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_pop_stb && !i_wb_push_stb))
-			assert($past(ptr_writes) == ptr_writes);
-
 	// Obviously we can write to a non-full FIFO
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_push_stb) && $past(!full))
+		if (f_past_valid && $past(i_reset_n && i_wb_push_stb && !full, 2) && $past(i_reset_n) && i_reset_n)
 			assert(ptr_writes == $past(ptr_writes_after));
 
 	// And we can read from a non-empty FIFO
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_pop_stb) && $past(!empty))
+		if (f_past_valid && $past(i_reset_n && i_wb_pop_stb && !empty, 2) && $past(i_reset_n) && i_reset_n)
 			assert(ptr_reads == $past(ptr_reads_after));
 
 	// Check we're reading the right data from memory
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_wb_pop_stb && !empty && i_reset_n, 2) && $past(i_reset_n) && i_reset_n)
-			assert(mem_addr_r == ptr_reads && o_wb_pop_data == mem_data_read);
+		if (f_past_valid && $past(i_wb_pop_stb && !empty && i_reset_n) && i_reset_n)
+			assert(mem_addr_r == $past(ptr_reads) && o_wb_pop_data == $past(mem_data_read));
 
 	// And we're writing the right data to memory
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_wb_push_stb && !full && i_reset_n) && i_reset_n)
+		if (f_past_valid && $past(i_wb_push_stb && !full && i_reset_n, 2) && $past(i_reset_n) && i_reset_n)
 			assert(mem_data_write == $past(i_wb_push_data) && mem_we && mem_addr_w == $past(ptr_writes));
 
 	// Also that we can't write to memory if FIFO is full
@@ -237,22 +229,22 @@ module wb_fifo
 
 	// We shouldn't get into a full situation after a pull
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_pop_stb))
+		if (f_past_valid && $past(i_wb_pop_stb && !i_wb_push_stb && i_reset_n, 2) && $past(i_reset_n && !i_wb_push_stb) && i_reset_n)
 			assert(!full);
 
 	// And obviously it should be impossible to be empty after a push
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n, 2) && $past(i_reset_n) && i_reset_n && $past(i_wb_push_stb && !i_wb_pop_stb))
+		if (f_past_valid && $past(i_reset_n && i_wb_push_stb && !i_wb_pop_stb, 2) && $past(i_reset_n && !i_wb_pop_stb) && i_reset_n && $past(!i_wb_pop_stb))
 			assert(!empty);
 
-    // There's no back pressure unless we're full so we should be acking as soon as we get a valid memory result (i.e.: 1 cycle after request)
+    // Push ack should come when write memory operations are done (2 cycles)
     always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n && i_wb_push_stb && !o_wb_push_stall) && i_reset_n)
+		if (f_past_valid && $past(i_reset_n && i_wb_push_stb && !o_wb_push_stall, 2) && $past(i_reset_n) && i_reset_n)
 			assert(o_wb_push_ack);
 	
-	// We should always ack 1 clock cycle after a pop
+	// Pop ack should come when read memory operations are done (2 cycles)
 	always @(posedge i_clk)
-		if (f_past_valid && $past(i_reset_n && i_wb_pop_stb && !empty) && i_reset_n)
+		if (f_past_valid && $past(i_reset_n && i_wb_pop_stb && !empty, 2) && $past(i_reset_n) && i_reset_n)
 			assert(o_wb_pop_ack);
 
     // We shouldn't stall unless we're full

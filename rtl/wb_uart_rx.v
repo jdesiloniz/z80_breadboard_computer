@@ -299,7 +299,7 @@ module wb_uart_rx
 
     // When finished receiving data, we should push the received byte:
     always @(posedge i_clk)
-        if (f_past_valid && i_reset_n && state == STATE_RX_RECEIVE_BIT9 && clk_div_did_rise) begin
+        if (f_past_valid && i_reset_n && state == STATE_RX_RECEIVE_BIT9 && uart_rx) begin
             assert(o_wb_push_fifo_stb == 1'b1);
             assert(o_wb_push_fifo_data == shifter_data[UART_SHIFTER_WIDTH-2:1]);
         end
