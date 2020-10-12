@@ -1,0 +1,16 @@
+[tasks]
+prf
+
+[options]
+prf: mode prove
+depth 40
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -formal reset_controller.v
+prep -top reset_controller
+
+[files]
+reset_controller.v

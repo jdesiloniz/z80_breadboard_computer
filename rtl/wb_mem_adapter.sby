@@ -9,8 +9,8 @@ depth 40
 smtbmc
 
 [script]
-read_verilog -formal mem_adapter_wb.v
-prep -top mem_adapter_wb
+read_verilog -formal wb_mem_adapter.v
+prep -top wb_mem_adapter
 
 [files]
-mem_adapter_wb.v
+wb_mem_adapter.v

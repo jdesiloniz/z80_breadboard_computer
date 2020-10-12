@@ -1,11 +1,11 @@
 `default_nettype none
 /*
- * mem_adapter_wb
+ * wb_mem_adapter
  *
- * Wishbone-based module to provide a memory space to a Z80 computer comprising two memories (ROM and RAM)
+ * Wishbone-based module to provide a memory space to a CPU computer comprising two memories (ROM and RAM)
  * and some I/O related registers to provide read/write from UART serial port.
  *
- * A separate module that handles the registers and interprets the Z80 signals will use this bus to perform
+ * A separate module that handles the registers and interprets the CPU signals will use this bus to perform
  * the requested operations.
  *
  * All operations last 1 clock cycle (access to block ram), so memory operations can effectively be dispatched
@@ -27,11 +27,11 @@
  *
  */
 
-module mem_adapter_wb 
+module wb_mem_adapter
 #(
     // Total addressable space: 64KB
-    parameter Z80_DATA_WIDTH = 8,
-    parameter Z80_ADDR_WIDTH = 16,
+    parameter CPU_DATA_WIDTH = 8,
+    parameter CPU_ADDR_WIDTH = 16,
     // ROM size: 16KB
     parameter ROM_ADDR_WIDTH = 14,
     // RAM size: 24KB?
@@ -50,43 +50,43 @@ module mem_adapter_wb
     input   wire                            i_wb_cyc,
     input   wire                            i_wb_stb,
     input   wire                            i_wb_we,
-    input   wire    [Z80_ADDR_WIDTH-1:0]    i_wb_addr,
-    input   wire    [Z80_DATA_WIDTH-1:0]    i_wb_data,
+    input   wire    [CPU_ADDR_WIDTH-1:0]    i_wb_addr,
+    input   wire    [CPU_DATA_WIDTH-1:0]    i_wb_data,
     output  reg                             o_wb_ack,
     output  reg                             o_wb_stall,
-    output  reg     [Z80_DATA_WIDTH-1:0]    o_wb_data,
+    output  reg     [CPU_DATA_WIDTH-1:0]    o_wb_data,
 
     // ROM address bus
     output  reg     [ROM_ADDR_WIDTH-1:0]    o_rom_addr,
     output  reg                             o_rom_stb,
-    input   wire    [Z80_DATA_WIDTH-1:0]    i_rom_data,
+    input   wire    [CPU_DATA_WIDTH-1:0]    i_rom_data,
 
     // RAM address bus
     output  reg     [RAM_ADDR_WIDTH-1:0]    o_ram_addr,
     output  reg                             o_ram_stb,
     output  reg                             o_ram_wr,
-    input   wire    [Z80_DATA_WIDTH-1:0]    i_ram_data,
-    output  reg     [Z80_DATA_WIDTH-1:0]    o_ram_data,
+    input   wire    [CPU_DATA_WIDTH-1:0]    i_ram_data,
+    output  reg     [CPU_DATA_WIDTH-1:0]    o_ram_data,
 
     // UART bus
     // Each UART module will support a FIFO memory. We'll treat these as memory read/writes byte by byte.
     output  reg                             o_wb_rx_stb,
     output  reg                             o_wb_rx_cyc,
-    input   wire    [Z80_DATA_WIDTH-1:0]    i_wb_rx_data,
+    input   wire    [CPU_DATA_WIDTH-1:0]    i_wb_rx_data,
     input   wire                            i_wb_rx_stall,
     input   wire                            i_wb_rx_ack,
     input   wire                            rx_empty,
 
     output  reg                             o_wb_tx_stb,
     output  reg                             o_wb_tx_cyc,
-    output  reg     [Z80_DATA_WIDTH-1:0]    o_wb_tx_data,
+    output  reg     [CPU_DATA_WIDTH-1:0]    o_wb_tx_data,
     input   wire                            i_wb_tx_ack,
     input   wire                            i_wb_tx_stall,
 
     output  reg                             o_completed_op_led
 );
 
-    localparam ROM_DATA_ZERO = {Z80_DATA_WIDTH{1'b0}};
+    localparam ROM_DATA_ZERO = {CPU_DATA_WIDTH{1'b0}};
     
     /******************
      * DATA PATH
@@ -102,9 +102,9 @@ module mem_adapter_wb
     reg                             output_uart_status;
     reg                             output_led_switch;
 
-    reg     [Z80_DATA_WIDTH-1:0]    temp_output_data;
-    reg     [Z80_DATA_WIDTH-1:0]    temp_output_uart_data;
-    reg     [Z80_DATA_WIDTH-1:0]    temp_output_uart_status;
+    reg     [CPU_DATA_WIDTH-1:0]    temp_output_data;
+    reg     [CPU_DATA_WIDTH-1:0]    temp_output_uart_data;
+    reg     [CPU_DATA_WIDTH-1:0]    temp_output_uart_status;
 
     // Output data results and acks from memory and UART reads
     always @(*) begin
@@ -132,7 +132,7 @@ module mem_adapter_wb
     end
 
     always @(*) begin
-        // Strobe signals for each memory activates based on the input address from Z80. We should never call both memories at the same time.
+        // Strobe signals for each memory activates based on the input address from CPU. We should never call both memories at the same time.
         o_rom_stb       = request_rom_data;    
         o_ram_stb       = request_ram_data;
         o_ram_wr        = request_ram_data && i_wb_we;
@@ -147,8 +147,8 @@ module mem_adapter_wb
     end
 
     // Address decoding
-    reg [Z80_ADDR_WIDTH-1:0] tmp_rom_addr;
-    reg [Z80_ADDR_WIDTH-1:0] tmp_ram_addr;
+    reg [CPU_ADDR_WIDTH-1:0] tmp_rom_addr;
+    reg [CPU_ADDR_WIDTH-1:0] tmp_ram_addr;
     always @(*) begin
         o_rom_addr      = i_wb_addr[ROM_ADDR_WIDTH-1:0];
         tmp_ram_addr    = i_wb_addr - ROM_ADDR_LIMIT;
@@ -158,8 +158,8 @@ module mem_adapter_wb
     // UART status register
     //   7   6   5   4   3   2        1              0
     // | x | x | x | x | x | x | tx_fifo_full | rx_fifo_empty |
-    reg [Z80_DATA_WIDTH-1:0] reg_uart_status;
-    localparam UART_STATUS_REG_GAP = Z80_DATA_WIDTH - 2;
+    reg [CPU_DATA_WIDTH-1:0] reg_uart_status;
+    localparam UART_STATUS_REG_GAP = CPU_DATA_WIDTH - 2;
 
     always @(*) begin
         reg_uart_status = {{UART_STATUS_REG_GAP{1'b0}}, i_wb_tx_stall, rx_empty};
