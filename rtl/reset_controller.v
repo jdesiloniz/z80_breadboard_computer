@@ -27,7 +27,7 @@ module reset_controller #(
 
     // Count up
     always @(posedge i_clk) begin
-        reset_cnt = (reset_cnt != RESET_COUNT_FULL) ? reset_cnt + 1'b1 : RESET_COUNT_ZERO;
+        reset_cnt <= (reset_cnt != RESET_COUNT_FULL) ? reset_cnt + 1'b1 : RESET_COUNT_FULL;
     end
 
 `ifdef FORMAL

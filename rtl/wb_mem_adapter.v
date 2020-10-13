@@ -73,14 +73,18 @@ module wb_mem_adapter
     output  reg                             o_wb_rx_stb,
     output  reg                             o_wb_rx_cyc,
     input   wire    [CPU_DATA_WIDTH-1:0]    i_wb_rx_data,
+    /* verilator lint_off UNUSED */
     input   wire                            i_wb_rx_stall,
     input   wire                            i_wb_rx_ack,
+    /* verilator lint_on UNUSED */
     input   wire                            rx_empty,
 
     output  reg                             o_wb_tx_stb,
     output  reg                             o_wb_tx_cyc,
     output  reg     [CPU_DATA_WIDTH-1:0]    o_wb_tx_data,
+    /* verilator lint_off UNUSED */
     input   wire                            i_wb_tx_ack,
+    /* verilator lint_on UNUSED */
     input   wire                            i_wb_tx_stall,
 
     output  reg                             o_completed_op_led
@@ -126,29 +130,31 @@ module wb_mem_adapter
         end
     end
 
-    reg temp_led_reset_value;
     always @(*) begin
         o_completed_op_led = registered_led_value;
     end
 
-    always @(*) begin
+    always @(posedge i_clk) begin
         // Strobe signals for each memory activates based on the input address from CPU. We should never call both memories at the same time.
-        o_rom_stb       = request_rom_data;    
-        o_ram_stb       = request_ram_data;
-        o_ram_wr        = request_ram_data && i_wb_we;
-        o_ram_data      = i_wb_data;
+        o_rom_stb       <= request_rom_data;    
+        o_ram_stb       <= request_ram_data;
+        o_ram_wr        <= request_ram_data && i_wb_we;
+        o_ram_data      <= i_wb_data;
 
-        o_wb_rx_cyc     = request_uart_data_rx||transition_submit_result_uart_rx;
-        o_wb_rx_stb     = request_uart_data_rx;
+        o_wb_rx_cyc     <= request_uart_data_rx||transition_submit_result_uart_rx;
+        o_wb_rx_stb     <= request_uart_data_rx;
 
-        o_wb_tx_cyc     = request_uart_data_tx||transition_submit_result_uart_tx;
-        o_wb_tx_stb     = request_uart_data_tx;
-        o_wb_tx_data    = i_wb_data;
+        o_wb_tx_cyc     <= request_uart_data_tx||transition_submit_result_uart_tx;
+        o_wb_tx_stb     <= request_uart_data_tx;
+        o_wb_tx_data    <= i_wb_data;
     end
 
     // Address decoding
-    reg [CPU_ADDR_WIDTH-1:0] tmp_rom_addr;
+    
+    /* verilator lint_off UNUSED */ // Because of the higher bit not being used
     reg [CPU_ADDR_WIDTH-1:0] tmp_ram_addr;
+    /* verilator lint_on UNUSED */
+
     always @(*) begin
         o_rom_addr      = i_wb_addr[ROM_ADDR_WIDTH-1:0];
         tmp_ram_addr    = i_wb_addr - ROM_ADDR_LIMIT;
@@ -161,8 +167,8 @@ module wb_mem_adapter
     reg [CPU_DATA_WIDTH-1:0] reg_uart_status;
     localparam UART_STATUS_REG_GAP = CPU_DATA_WIDTH - 2;
 
-    always @(*) begin
-        reg_uart_status = {{UART_STATUS_REG_GAP{1'b0}}, i_wb_tx_stall, rx_empty};
+    always @(posedge i_clk) begin
+        reg_uart_status <= {{UART_STATUS_REG_GAP{1'b0}}, i_wb_tx_stall, rx_empty};
     end
 
     /******************

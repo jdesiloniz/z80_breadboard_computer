@@ -130,7 +130,6 @@ module wb_test_bed
     wire     [7:0]              i_wb_uart_tx_data;
     wire                        o_wb_uart_tx_ack;
     wire                        o_wb_uart_tx_stall;
-    wire                        o_wb_uart_tx_empty;
 
     wb_uart_tx #(
         .BAUD_DIV_RATE          (UART_BAUD_DIV_RATE),
@@ -180,8 +179,8 @@ module wb_test_bed
         .o_wb_rx_stb            (i_wb_uart_rx_stb),
         .o_wb_rx_cyc            (i_wb_uart_rx_cyc),
         .i_wb_rx_data           (o_wb_uart_rx_data),
-        .i_wb_rx_stall          (o_wb_uart_rx_ack),
-        .i_wb_rx_ack            (o_wb_uart_rx_stall),
+        .i_wb_rx_stall          (o_wb_uart_rx_stall),
+        .i_wb_rx_ack            (o_wb_uart_rx_ack),
         .rx_empty               (o_wb_uart_rx_empty),
 
         .o_wb_tx_stb            (i_wb_uart_tx_stb),
