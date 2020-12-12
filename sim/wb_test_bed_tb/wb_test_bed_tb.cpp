@@ -26,14 +26,6 @@ unsigned fifo_buffer_tx[MAX_FIFO_ITEMS];
 unsigned rom[ROM_SIZE];
 unsigned ram[RAM_SIZE];
 
-/*
-output  wire    [RAM_ADDR_WIDTH-1:0]    o_mem_adapter_ram_addr,
-    output  wire                            o_mem_adapter_ram_stb,
-    output  wire                            o_mem_adapter_ram_wr,
-    input   wire    [CPU_DATA_WIDTH-1:0]    i_mem_adapter_ram_data,
-    output  wire    [CPU_DATA_WIDTH-1:0]    o_mem_adapter_ram_data,
-*/
-
 unsigned general_addr_for_ram_addr(unsigned ram_addr) {
     return ROM_SIZE + ram_addr;
 }

@@ -9,7 +9,7 @@ depth 40
 smtbmc
 
 [script]
-read_verilog -formal clk_divider.v
+read_verilog -DCLK_DIVIDER -formal clk_divider.v
 prep -top clk_divider
 
 [files]

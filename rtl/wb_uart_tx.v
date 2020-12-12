@@ -106,13 +106,12 @@ module wb_uart_tx
     );
     
     // ******** Bit shifter
-    /* verilator lint_off UNOPTFLAT */
     reg     [UART_SHIFTER_WIDTH-1:0]    o_shifter_data;
-    /* verilator lint_on  UNOPTFLAT */
     reg     [2:0]                       o_shifter_op;
     wire    [UART_SHIFTER_WIDTH-1:0]    i_shifter_data;
 
     shifter #(.DATA_WIDTH(UART_SHIFTER_WIDTH)) SHIFTER(
+        .i_clk          (i_clk),
         .o_data         (i_shifter_data),
         .i_op           (o_shifter_op),
         .i_data         (o_shifter_data)
@@ -140,19 +139,19 @@ module wb_uart_tx
     end
 
     // Shift register
-    reg     [UART_SHIFTER_WIDTH-1:0]    temp_shifter_data_clear;
-    reg     [UART_SHIFTER_WIDTH-1:0]    temp_shifter_data_load;
-
-    always @(*) begin
-        temp_shifter_data_clear         = clear_shifted_data ? UART_SHIFTER_FULL : o_shifter_data;
-        temp_shifter_data_load          = load_shift_data ? {1'b1, i_wb_pop_fifo_data, 1'b0} : temp_shifter_data_clear;
-        o_shifter_op                    = 3'd3; // Shift to right, padding with 1'b1
-
-        uart_tx = (i_reset_n && state >= STATE_TX_SEND_BIT0) ? o_shifter_data[0] : 1'b1;
+    always @(posedge i_clk) begin
+        if (!i_reset_n||clear_shifted_data) begin
+            o_shifter_data <= UART_SHIFTER_FULL;
+        end else if (load_shift_data) begin
+            o_shifter_data <= {1'b1, i_wb_pop_fifo_data, 1'b0};
+        end else if (shift_data) begin
+            o_shifter_data <= i_shifter_data;
+        end
     end
 
-    always @(posedge i_clk) begin
-        o_shifter_data <= shift_data ? i_shifter_data : temp_shifter_data_load;
+    always @(*) begin
+        o_shifter_op                    = 3'd3; // Shift to right, padding with 1'b1
+        uart_tx = (i_reset_n && state >= STATE_TX_SEND_BIT0) ? o_shifter_data[0] : 1'b1;
     end
 
     // Output wb signals
@@ -191,10 +190,7 @@ module wb_uart_tx
     localparam STATE_TX_SEND_BIT8               = 4'd11;
     localparam STATE_TX_SEND_BIT9               = 4'd12;
 
-    reg     [3:0]   state;
-    /* verilator lint_off UNOPTFLAT */
-    reg     [3:0]   state_next;
-    /* verilator lint_on UNOPTFLAT */
+    reg     [3:0]   state = STATE_TX_IDLE;
 
     reg transition_wait_for_fifo_read;
     reg transition_prepare_data;
@@ -227,35 +223,38 @@ module wb_uart_tx
     end
 
     // Applying state transitions
-    always @(*) begin
-        if (!i_reset_n) begin
-            state_next = STATE_TX_IDLE;
-        end else begin
-            // Avoid illegal states:
-            state_next = (state > STATE_TX_SEND_BIT9)           ? STATE_TX_IDLE : state_next;
-
-            state_next = (transition_wait_for_fifo_read)        ? STATE_TX_WAIT_FOR_FIFO_ACK : state_next;
-            state_next = (transition_prepare_data)              ? STATE_TX_PREPARE_DATA : state_next;
-            state_next = (transition_wait_for_bit0)             ? STATE_TX_SEND_BIT0 : state_next;
-            state_next = (transition_wait_for_bit1)             ? STATE_TX_SEND_BIT1 : state_next;
-            state_next = (transition_wait_for_bit2)             ? STATE_TX_SEND_BIT2 : state_next;
-            state_next = (transition_wait_for_bit3)             ? STATE_TX_SEND_BIT3 : state_next;
-            state_next = (transition_wait_for_bit4)             ? STATE_TX_SEND_BIT4 : state_next;
-            state_next = (transition_wait_for_bit5)             ? STATE_TX_SEND_BIT5 : state_next;
-            state_next = (transition_wait_for_bit6)             ? STATE_TX_SEND_BIT6 : state_next;
-            state_next = (transition_wait_for_bit7)             ? STATE_TX_SEND_BIT7 : state_next;
-            state_next = (transition_wait_for_bit8)             ? STATE_TX_SEND_BIT8 : state_next;
-            state_next = (transition_wait_for_bit9)             ? STATE_TX_SEND_BIT9 : state_next;
-            state_next = (transition_finish_tx)                 ? STATE_TX_IDLE : state_next;
-        end
-    end
-
     always @(posedge i_clk) begin
-        if (!i_reset_n) begin
+        if (!i_reset_n||state > STATE_TX_SEND_BIT9) begin
             state <= STATE_TX_IDLE;
         end else begin
-            state <= state_next;
-        end        
+            if (transition_wait_for_fifo_read) begin
+                state <= STATE_TX_WAIT_FOR_FIFO_ACK;
+            end else if (transition_prepare_data) begin
+                state <= STATE_TX_PREPARE_DATA;
+            end else if (transition_wait_for_bit0) begin
+                state <= STATE_TX_SEND_BIT0;
+            end else if (transition_wait_for_bit1) begin
+                state <= STATE_TX_SEND_BIT1;
+            end else if (transition_wait_for_bit2) begin
+                state <= STATE_TX_SEND_BIT2;
+            end else if (transition_wait_for_bit3) begin
+                state <= STATE_TX_SEND_BIT3;
+            end else if (transition_wait_for_bit4) begin
+                state <= STATE_TX_SEND_BIT4;
+            end else if (transition_wait_for_bit5) begin
+                state <= STATE_TX_SEND_BIT5;
+            end else if (transition_wait_for_bit6) begin
+                state <= STATE_TX_SEND_BIT6;
+            end else if (transition_wait_for_bit7) begin
+                state <= STATE_TX_SEND_BIT7;
+            end else if (transition_wait_for_bit8) begin
+                state <= STATE_TX_SEND_BIT8;
+            end else if (transition_wait_for_bit9) begin
+                state <= STATE_TX_SEND_BIT9;
+            end else if (transition_finish_tx) begin
+                state <= STATE_TX_IDLE;
+            end
+        end
     end
 
     // Control signals for data path

@@ -173,10 +173,7 @@ module wb_uart_rx
     localparam STATE_RX_RECEIVE_BIT9            = 4'd11;
     localparam STATE_RX_PUSH_DATA               = 4'd12;
 
-    reg     [3:0]   state;
-    /* verilator lint_off UNOPTFLAT */
-    reg     [3:0]   state_next;
-    /* verilator lint_on UNOPTFLAT */
+    reg     [3:0]   state = STATE_RX_IDLE;
 
     reg transition_prepare_data;
     reg transition_wait_for_bit0;
@@ -209,35 +206,38 @@ module wb_uart_rx
     end
 
     // Applying state transitions
-    always @(*) begin
-        if (!i_reset_n) begin
-            state_next = STATE_RX_IDLE;
-        end else begin
-            // Avoid illegal states:
-            state_next = (state > STATE_RX_PUSH_DATA)           ? STATE_RX_IDLE : state_next;
-
-            state_next = (transition_prepare_data)              ? STATE_RX_PREPARE_DATA : state_next;
-            state_next = (transition_wait_for_bit0)             ? STATE_RX_RECEIVE_BIT0 : state_next;
-            state_next = (transition_wait_for_bit1)             ? STATE_RX_RECEIVE_BIT1 : state_next;
-            state_next = (transition_wait_for_bit2)             ? STATE_RX_RECEIVE_BIT2 : state_next;
-            state_next = (transition_wait_for_bit3)             ? STATE_RX_RECEIVE_BIT3 : state_next;
-            state_next = (transition_wait_for_bit4)             ? STATE_RX_RECEIVE_BIT4 : state_next;
-            state_next = (transition_wait_for_bit5)             ? STATE_RX_RECEIVE_BIT5 : state_next;
-            state_next = (transition_wait_for_bit6)             ? STATE_RX_RECEIVE_BIT6 : state_next;
-            state_next = (transition_wait_for_bit7)             ? STATE_RX_RECEIVE_BIT7 : state_next;
-            state_next = (transition_wait_for_bit8)             ? STATE_RX_RECEIVE_BIT8 : state_next;
-            state_next = (transition_wait_for_bit9)             ? STATE_RX_RECEIVE_BIT9 : state_next;
-            state_next = (transition_push_data)                 ? STATE_RX_PUSH_DATA : state_next;
-            state_next = (transition_finish_rx)                 ? STATE_RX_IDLE : state_next;
-        end
-    end
-
     always @(posedge i_clk) begin
-        if (!i_reset_n) begin
+        if (!i_reset_n||state > STATE_RX_PUSH_DATA) begin
             state <= STATE_RX_IDLE;
         end else begin
-            state <= state_next;
-        end        
+            if (transition_prepare_data) begin
+                state <= STATE_RX_PREPARE_DATA;
+            end else if (transition_wait_for_bit0) begin
+                state <= STATE_RX_RECEIVE_BIT0;
+            end else if (transition_wait_for_bit1) begin
+                state <= STATE_RX_RECEIVE_BIT1;
+            end else if (transition_wait_for_bit2) begin
+                state <= STATE_RX_RECEIVE_BIT2;
+            end else if (transition_wait_for_bit3) begin
+                state <= STATE_RX_RECEIVE_BIT3;
+            end else if (transition_wait_for_bit4) begin
+                state <= STATE_RX_RECEIVE_BIT4;
+            end else if (transition_wait_for_bit5) begin
+                state <= STATE_RX_RECEIVE_BIT5;
+            end else if (transition_wait_for_bit6) begin
+                state <= STATE_RX_RECEIVE_BIT6;
+            end else if (transition_wait_for_bit7) begin
+                state <= STATE_RX_RECEIVE_BIT7;
+            end else if (transition_wait_for_bit8) begin
+                state <= STATE_RX_RECEIVE_BIT8;
+            end else if (transition_wait_for_bit9) begin
+                state <= STATE_RX_RECEIVE_BIT9;
+            end else if (transition_push_data) begin
+                state <= STATE_RX_PUSH_DATA;
+            end else if (transition_finish_rx) begin
+                state <= STATE_RX_IDLE;
+            end
+        end
     end
 
     // Control signals for data path

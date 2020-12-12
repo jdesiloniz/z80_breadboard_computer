@@ -156,9 +156,12 @@ module wb_mem_adapter
     /* verilator lint_on UNUSED */
 
     always @(*) begin
-        o_rom_addr      = i_wb_addr[ROM_ADDR_WIDTH-1:0];
         tmp_ram_addr    = i_wb_addr - ROM_ADDR_LIMIT;
-        o_ram_addr      = tmp_ram_addr[RAM_ADDR_WIDTH-1:0];
+    end
+
+    always @(posedge i_clk) begin
+        o_rom_addr      <= i_wb_addr[ROM_ADDR_WIDTH-1:0];        
+        o_ram_addr      <= tmp_ram_addr[RAM_ADDR_WIDTH-1:0];
     end
 
     // UART status register
@@ -167,8 +170,8 @@ module wb_mem_adapter
     reg [CPU_DATA_WIDTH-1:0] reg_uart_status;
     localparam UART_STATUS_REG_GAP = CPU_DATA_WIDTH - 2;
 
-    always @(posedge i_clk) begin
-        reg_uart_status <= {{UART_STATUS_REG_GAP{1'b0}}, i_wb_tx_stall, rx_empty};
+    always @(*) begin
+        reg_uart_status = {{UART_STATUS_REG_GAP{1'b0}}, i_wb_tx_stall, rx_empty};
     end
 
     /******************
@@ -182,10 +185,7 @@ module wb_mem_adapter
     localparam STATE_WAITING_FOR_UART_STATUS    = 3'd5;
     localparam STATE_WAITING_FOR_LED_SWITCH     = 3'd6;
 
-    reg     [2:0]   state;
-    /* verilator lint_off UNOPTFLAT */
-    reg     [2:0]   state_next;
-    /* verilator lint_on UNOPTFLAT */
+    reg     [2:0]   state = STATE_IDLE;
 
     reg transition_wait_for_ram;        
     reg transition_wait_for_rom;        
@@ -253,34 +253,36 @@ module wb_mem_adapter
     end
 
     // Applying state transitions
-    always @(*) begin
-        if (!i_reset_n) begin
-            state_next = STATE_IDLE;
-        end else begin
-            // Avoid illegal states:
-            state_next = (state > STATE_WAITING_FOR_LED_SWITCH) ? STATE_IDLE : state_next;
-
-            state_next = (transition_wait_for_rom)              ? STATE_WAITING_FOR_ROM : state_next;
-            state_next = (transition_wait_for_ram)              ? STATE_WAITING_FOR_RAM : state_next;
-            state_next = (transition_wait_for_uart_rx)          ? STATE_WAITING_FOR_UART_RX : state_next;
-            state_next = (transition_wait_for_uart_tx)          ? STATE_WAITING_FOR_UART_TX : state_next;
-            state_next = (transition_wait_for_uart_status)      ? STATE_WAITING_FOR_UART_STATUS : state_next;
-            state_next = (transition_wait_for_led_switch)       ? STATE_WAITING_FOR_LED_SWITCH : state_next;
-            state_next = (transition_submit_result_rom)         ? STATE_IDLE : state_next;
-            state_next = (transition_submit_result_ram)         ? STATE_IDLE : state_next;
-            state_next = (transition_submit_result_uart_rx)     ? STATE_IDLE : state_next;
-            state_next = (transition_submit_result_uart_tx)     ? STATE_IDLE : state_next;
-            state_next = (transition_submit_result_uart_status) ? STATE_IDLE : state_next;
-            state_next = (transition_submit_result_led_switch)  ? STATE_IDLE : state_next;
-        end
-    end
-
     always @(posedge i_clk) begin
-        if (!i_reset_n) begin
+        if (!i_reset_n||state > STATE_WAITING_FOR_LED_SWITCH) begin
             state <= STATE_IDLE;
         end else begin
-            state <= state_next;
-        end        
+            if (transition_wait_for_rom) begin
+                state <= STATE_WAITING_FOR_ROM;
+            end else if (transition_wait_for_ram) begin
+                state <= STATE_WAITING_FOR_RAM;
+            end else if (transition_wait_for_uart_rx) begin
+                state <= STATE_WAITING_FOR_UART_RX;
+            end else if (transition_wait_for_uart_tx) begin
+                state <= STATE_WAITING_FOR_UART_TX;
+            end else if (transition_wait_for_uart_status) begin
+                state <= STATE_WAITING_FOR_UART_STATUS;
+            end else if (transition_wait_for_led_switch) begin
+                state <= STATE_WAITING_FOR_LED_SWITCH;
+            end else if (transition_submit_result_rom) begin
+                state <= STATE_IDLE;
+            end else if (transition_submit_result_ram) begin
+                state <= STATE_IDLE;
+            end else if (transition_submit_result_uart_rx) begin
+                state <= STATE_IDLE;
+            end else if (transition_submit_result_uart_tx) begin
+                state <= STATE_IDLE;
+            end else if (transition_submit_result_uart_status) begin
+                state <= STATE_IDLE;
+            end else if (transition_submit_result_led_switch) begin
+                state <= STATE_IDLE;
+            end
+        end
     end
 
     // Control signals for data path
@@ -386,19 +388,19 @@ module wb_mem_adapter
 
     // ROM requests should be passed to the appropiate memory bank
     always @(posedge i_clk) begin
-        if (f_past_valid && $past(i_reset_n) && i_reset_n && i_wb_stb && i_wb_addr < ROM_ADDR_LIMIT) begin
-            assert(o_rom_addr == i_wb_addr);
+        if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_stb) && $past(i_wb_addr < ROM_ADDR_LIMIT)) begin
+            assert(o_rom_addr == $past(i_wb_addr));
             assert(o_rom_stb == 1'b1);
         end
     end
     
     // RAM requests should be passed to the appropiate memory bank
     always @(posedge i_clk) begin
-        if (f_past_valid && $past(i_reset_n) && i_reset_n && i_wb_stb && i_wb_addr >= ROM_ADDR_LIMIT && i_wb_addr < RAM_ADDR_LIMIT) begin
-            assert(o_ram_addr == i_wb_addr - ROM_ADDR_LIMIT);
+        if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_stb) && $past(i_wb_addr >= ROM_ADDR_LIMIT) && $past(i_wb_addr < RAM_ADDR_LIMIT)) begin
+            assert(o_ram_addr == $past(i_wb_addr - ROM_ADDR_LIMIT));
             assert(o_ram_stb == 1'b1);
-            assert(o_ram_wr == i_wb_we);
-            assert(o_ram_data == i_wb_data);
+            assert(o_ram_wr == $past(i_wb_we));
+            assert(o_ram_data == $past(i_wb_data));
         end
     end
 
@@ -416,7 +418,7 @@ module wb_mem_adapter
 
     // We should generate a request to the UART RX module when requested
     always @(posedge i_clk) begin
-        if (f_past_valid && $past(i_reset_n) && i_reset_n && i_wb_stb && i_wb_addr == UART_ACCESS_ADDR && !i_wb_we) begin
+        if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_stb) && $past(i_wb_addr == UART_ACCESS_ADDR) && $past(!i_wb_we)) begin
             assert(o_wb_rx_cyc == 1'b1);
             assert(o_wb_rx_stb == 1'b1);
         end
@@ -424,16 +426,16 @@ module wb_mem_adapter
 
     // We should generate a request to the UART TX module when requested
     always @(posedge i_clk) begin
-        if (f_past_valid && $past(i_reset_n) && i_reset_n && i_wb_stb && i_wb_addr == UART_ACCESS_ADDR && i_wb_we) begin
+        if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(i_wb_stb) && $past(i_wb_addr == UART_ACCESS_ADDR) && $past(i_wb_we)) begin
             assert(o_wb_tx_cyc == 1'b1);
             assert(o_wb_tx_stb == 1'b1);
-            assert(o_wb_tx_data == i_wb_data);
+            assert(o_wb_tx_data == $past(i_wb_data));
         end
     end
 
     // We shouldn't have multiple kind of requests (RAM, ROM, UART...) sent at the same time
     always @(posedge i_clk) begin
-        if (f_past_valid && i_reset_n) begin
+        if (f_past_valid && $past(i_reset_n) && i_reset_n) begin
             assert(!(o_ram_stb && o_rom_stb));
             assert(!(o_ram_stb && o_wb_rx_stb));
             assert(!(o_rom_stb && o_wb_rx_stb));
@@ -473,7 +475,7 @@ module wb_mem_adapter
 
     // I/O requests aren't performed if there's no request in place (without resets)
     always @(posedge i_clk) begin
-        if (f_past_valid && $past(i_reset_n) && i_reset_n && !i_wb_cyc) begin
+        if (f_past_valid && $past(i_reset_n) && i_reset_n && $past(!i_wb_cyc)) begin
             assert(!o_rom_stb);
             assert(!o_ram_stb);
             assert(!o_wb_rx_stb);

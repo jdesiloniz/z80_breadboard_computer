@@ -61,10 +61,7 @@ module clk_divider
     /******************
      * FSM
     ******************/
-    reg state;
-    /* verilator lint_off UNOPTFLAT */
-    reg state_next;
-    /* verilator lint_on UNOPTFLAT */
+    reg state = STATE_IDLE;
 
     localparam STATE_IDLE = 1'd0;
     localparam STATE_COUNTING = 1'd1;
@@ -82,21 +79,16 @@ module clk_divider
         end
     end
 
-    always @(*) begin
-        if (!i_reset_n) begin
-            state_next = STATE_IDLE;
-        end else begin
-            state_next = (transition_idle_to_count) ? STATE_COUNTING : state_next;
-            state_next = (transition_back_to_idle)  ? STATE_IDLE : state_next;
-        end
-    end
-
     always @(posedge i_clk) begin
         if (!i_reset_n) begin
             state <= STATE_IDLE;
         end else begin
-            state <= state_next;
-        end        
+            if (transition_idle_to_count) begin
+                state <= STATE_COUNTING;
+            end else if (transition_back_to_idle) begin
+                state <= STATE_IDLE;
+            end
+        end
     end
 
     always @(*) begin
@@ -107,6 +99,7 @@ module clk_divider
 * Formal verification
 **********************/
 `ifdef	FORMAL
+`ifdef  CLK_DIVIDER
 	reg f_past_valid;
 	initial f_past_valid = 0;
 
@@ -169,6 +162,7 @@ module clk_divider
     end
 
     
+`endif
 `endif
 
 endmodule
