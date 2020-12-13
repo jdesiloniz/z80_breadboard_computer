@@ -36,11 +36,11 @@ void update_ram(TESTB<Vwb_test_bed> *tb) {
 
         if (tb->m_core->o_mem_adapter_ram_wr == 1) {
             unsigned data = tb->m_core->o_mem_adapter_ram_data;
-            printf("[TEST] Written %02X into RAM address %02X\n", data, addr);
+            //printf("[TEST] Written %02X into RAM address %02X\n", data, addr);
             ram[addr] = data;
         } else {
             unsigned data = ram[addr];
-            printf("[TEST] Read from RAM address %02X value %02X\n", addr, data);
+            //printf("[TEST] Read from RAM address %02X value %02X\n", addr, data);
             tb->m_core->i_mem_adapter_ram_data = data;
         }
     }
@@ -48,7 +48,12 @@ void update_ram(TESTB<Vwb_test_bed> *tb) {
 
 void update_rom(TESTB<Vwb_test_bed> *tb) {
     if (tb->m_core->o_mem_adapter_rom_stb == 1 && tb->m_core->o_mem_adapter_rom_addr < ROM_SIZE) {
-        tb->m_core->i_mem_adapter_rom_data = ram[tb->m_core->o_mem_adapter_rom_addr];
+        unsigned addr = tb->m_core->o_mem_adapter_rom_addr;
+        unsigned data = rom[addr];
+
+        tb->m_core->i_mem_adapter_rom_data = data;
+        
+        //printf("[TEST] Read from ROM address %02X value %02X\n", addr, data);
     }
 }
 
@@ -113,8 +118,54 @@ unsigned read_operation(TESTB<Vwb_test_bed> *tb, unsigned address) {
     return read_value;
 }
 
+void init_rom_data() {
+    srand((unsigned)time(NULL));
+
+    for (int i = 0; i < ROM_SIZE; i++) {
+        rom[i] = (rand() % 255) + 1;
+    }
+}
+
+void test_rom_data(TESTB<Vwb_test_bed> *tb) {
+    bool test_failed = false;
+
+    for (int i = 0; i < ROM_SIZE; i++) {
+        unsigned result = read_operation(tb, i);
+        unsigned expected = rom[i];
+
+        if (result != expected) {
+            printf("[TEST] ROM read fail at addr %04X, expected [%02X] and got [%02X]\n", i, expected, result);
+            test_failed = true;
+        }
+    }
+
+    if (!test_failed) {
+        printf("[TEST] ROM test successful \n");
+    }
+}
+
+void test_ram_data(TESTB<Vwb_test_bed> *tb) {
+    bool test_failed = false;
+
+    for (int i = 0; i < RAM_SIZE; i++) {
+        unsigned addr = general_addr_for_ram_addr(i);
+        unsigned expected = (rand() % 255) + 1;
+        write_operation(tb, addr, expected);
+        unsigned read_result = read_operation(tb, addr);
+
+        if (read_result != expected) {
+            printf("[TEST] RAM read fail at addr %04X, expected [%02X] and got [%02X]\n", i, expected, read_result);
+            test_failed = true;
+        }
+    }
+
+    if (!test_failed) {
+        printf("[TEST] RAM test successful \n");
+    }
+}
+
 int	main(int argc, char **argv) {
-	Verilated::commandArgs(argc, argv);
+    Verilated::commandArgs(argc, argv);
 
 	TESTB<Vwb_test_bed> *tb = new TESTB<Vwb_test_bed>;
 	tb->opentrace("wb_test_bed.vcd");
@@ -123,10 +174,12 @@ int	main(int argc, char **argv) {
 	printf("[TEST] Starting TEST BED...\n");
 	wait_clocks(tb, 100);
 
-    write_operation(tb, general_addr_for_ram_addr(0), 100);
-    read_operation(tb, general_addr_for_ram_addr(0));
+    // Test RAM writes/reads
+    test_ram_data(tb);
 
-    // TODO: prepare some data for ROM and test ROM reads
+    // Prepare data for ROM and test ROM reads
+    init_rom_data();
+    test_rom_data(tb);
 
     // TODO: check UART RX/TX and state register
 

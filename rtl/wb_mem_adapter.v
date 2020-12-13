@@ -54,7 +54,7 @@ module wb_mem_adapter
     input   wire    [CPU_DATA_WIDTH-1:0]    i_wb_data,
     output  reg                             o_wb_ack,
     output  reg                             o_wb_stall,
-    output  reg     [CPU_DATA_WIDTH-1:0]    o_wb_data,
+    output  reg     [CPU_DATA_WIDTH-1:0]    o_wb_data = ROM_DATA_ZERO,
 
     // ROM address bus
     output  reg     [ROM_ADDR_WIDTH-1:0]    o_rom_addr,
@@ -105,19 +105,20 @@ module wb_mem_adapter
     reg                             output_uart_data;
     reg                             output_uart_status;
     reg                             output_led_switch;
-
-    reg     [CPU_DATA_WIDTH-1:0]    temp_output_data;
-    reg     [CPU_DATA_WIDTH-1:0]    temp_output_uart_data;
-    reg     [CPU_DATA_WIDTH-1:0]    temp_output_uart_status;
-
+    
     // Output data results and acks from memory and UART reads
-    always @(*) begin
-        temp_output_uart_status = (output_uart_status) ? reg_uart_status : ROM_DATA_ZERO;
-        temp_output_uart_data   = (output_uart_data) ? i_wb_rx_data : temp_output_uart_status;
-        temp_output_data        = (output_rom_data) ? i_rom_data : temp_output_uart_data;        
+    always @(posedge i_clk) begin
+        if (output_uart_status) begin
+            o_wb_data <= reg_uart_status;
+        end else if (output_uart_data) begin
+            o_wb_data <= i_wb_rx_data;
+        end else if (output_rom_data) begin
+            o_wb_data <= i_rom_data;
+        end else if (output_ram_data) begin
+            o_wb_data <= i_ram_data;
+        end
 
-        o_wb_data               = (output_ram_data) ? i_ram_data : temp_output_data;
-        o_wb_ack                = output_ram_data||output_rom_data||output_uart_data||output_uart_status||output_led_switch;
+        o_wb_ack <= output_ram_data||output_rom_data||output_uart_data||output_uart_status||output_led_switch;
     end
 
     // "Operation complete" LED support. Users can write to 0xA002 and the LSB will represent the new state of the LED (1=on). Reads are ignored.
